@@ -1,0 +1,226 @@
+model 
+domain - employee
+
+namespace ASPNETMVCCRUD2.Models.Domain
+{
+    public class Employee
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; }
+        public DateTime DateOfBirth { get; set;}
+    }
+}
+
+
+Add Employee
+
+namespace ASPNETMVCCRUD2.Models
+{
+    public class AddEmployee
+    {
+        public string Name { get; set; }
+        public DateTime DateOfBirth { get; set; }
+    }
+}
+
+
+update employee
+namespace ASPNETMVCCRUD2.Models
+{
+    public class UpdateEmployee
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; }
+        public DateTime DateOfBirth { get; set; }
+    }
+}
+
+
+
+Employee Controller
+
+using ASPNETMVCCRUD2.Data;
+using ASPNETMVCCRUD2.Models;
+using ASPNETMVCCRUD2.Models.Domain;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace ASPNETMVCCRUD2.Controllers
+{
+    public class EmployeesController : Controller
+    {
+        private readonly MVCDemoDbContext _context;
+
+        public EmployeesController(MVCDemoDbContext _context)
+        {
+            this._context = _context;
+        }
+        //Get All List
+        [HttpGet]
+        public IActionResult Index()
+        {
+           var employees = _context.Employees.ToList();
+        return View(employees);
+        }
+        //Post Method
+        [HttpGet]
+        public IActionResult Add()
+        {
+            return View();
+        }
+        [HttpPost]
+        public IActionResult Add(AddEmployee addEmployeeRequest)
+        {
+            var employee = new Employee()
+            {
+                Id = Guid.NewGuid(),
+                Name = addEmployeeRequest.Name,
+                DateOfBirth = addEmployeeRequest.DateOfBirth,
+            };
+
+            _context.Employees.Add(employee);
+            _context.SaveChanges();
+            return RedirectToAction("Index");
+        }
+        //Delete
+        [HttpPost]
+        public IActionResult Delete(UpdateEmployee model)
+        {
+            var employee = _context.Employees.Find(model.Id);
+            if (employee != null)
+            {
+                _context.Employees.Remove(employee);
+                _context.SaveChanges();
+                return RedirectToAction("Index");
+            }
+            return RedirectToAction("Index");
+        }
+        //Update
+        [HttpGet]
+        public async Task<IActionResult> View(Guid id)
+        {
+            var employee = await _context.Employees.FirstOrDefaultAsync(x => x.Id == id);
+            if (employee != null)
+            {
+                var viewModel = new UpdateEmployee()
+                {
+                    Id = employee.Id,
+                    Name = employee.Name,
+                    DateOfBir0th = employee.DateOfBirth,
+                };
+                return await Task.Run(() => View("View",viewModel));
+            }
+            return RedirectToAction("Index");
+        }
+
+        [HttpPost]
+        public IActionResult View(UpdateEmployee model)
+        {
+            var employee = _context.Employees.Find(model.Id);
+            if(employee != null)
+            {
+                employee.Name = model.Name;
+                employee.DateOfBirth = model.DateOfBirth;
+                _context.SaveChanges();
+                return RedirectToAction("Index");
+            }
+            return RedirectToAction("Index");
+        }
+    }
+}
+
+
+html
+
+Add
+@model ASPNETMVCCRUD2.Models.Domain.Employee
+
+@{
+}
+<h1>Add Employee</h1>
+<form method="post" action="Add" class="mt-5">
+    <div class="mb-3">
+        <label for="" class="form-label">Name</label>
+        <input type="text" class="form-control" asp-for="Name" >
+    </div>
+    <div class="mb-3">
+        <label for="" class="form-label">DateOfBirth</label>
+        <input type="date" class="form-control" asp-for="DateOfBirth">
+    </div>
+   
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+
+Index
+@model List<ASPNETMVCCRUD2.Models.Domain.Employee>
+
+
+@{
+}
+<h1>Employees</h1>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Salary</th>
+            <th>Date Of Birth</th>
+            <th>Department</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var employee in Model)
+        {
+            <tr>
+                <td>@employee.Id</td>
+                <td>@employee.Name</td>
+                <td>@employee.DateOfBirth.ToString("dd-mm-yyyy")</td>
+                <td><a href="Employees/View/@employee.Id">View</a></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+
+View
+@model ASPNETMVCCRUD2.Models.UpdateEmployee
+
+
+@{
+}
+<h1>Edit Employee</h1>
+<form method="post" action="View" class="mt-5">
+    <div class="mb-3">
+        <label for="" class="form-label">Id</label>
+        <input type="text" class="form-control" asp-for="Id" readonly>
+    </div>
+    <div class="mb-3">
+        <label for="" class="form-label">Name</label>
+        <input type="text" class="form-control" asp-for="Name">
+    </div>
+    <div class="mb-3">
+        <label for="" class="form-label">DateOfBirth</label>
+        <input type="date" class="form-control" asp-for="DateOfBirth">
+    </div>
+
+    <button type="submit" class="btn btn-primary">Submit</button>
+    <button type="submit" class="btn btn-danger" asp-action="Delete" asp-controller="Employees">Delete</button>
+</form>
+
+
+Layout.html
+ <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Employees" asp-action="Index">Employees</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Employees" asp-action="Add">Add Employees</a>
+                        </li>
